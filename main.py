@@ -106,7 +106,6 @@ def update_cell_state(
     update_neighbours(heap, cell, allowed_cells, move_mode)
 
 
-
 def try_switch_mode(cell: Cell, current_move_mode: int) -> bool:
     can_switch = switch_move_mode(current_move_mode) & cell.move_mode
     if can_switch:
@@ -115,6 +114,32 @@ def try_switch_mode(cell: Cell, current_move_mode: int) -> bool:
         return True
     return False
 
+
+def get_path(cell: Cell):
+    path: List[Cell] = [cell]
+    next_cell: Cell = cell.parent
+    while next_cell:
+        path.append(next_cell)
+        next_cell = next_cell.parent
+
+    return path[::-1]
+
+
+def check_and_go(current: Cell, next_cell: Cell):
+    if current != next_cell.parent:
+        current_move_mode = current & WITHOUT_RING or current & WITHOUT_RING
+        while current.parent:
+            if try_switch_mode(current.parent, current_move_mode):
+                current_move_mode = switch_move_mode(current_move_mode)
+                read_obstacles(current.parent)
+            current = current.parent
+            print(current.x, current.y)
+            read_obstacles(current)
+
+        path = get_path(next_cell)[1:-1]
+        for cell in path:
+            print(cell.x, cell.y)
+            read_obstacles(cell)
 
 def a_star(start: Tuple[int, int], goal: Tuple[int, int]) -> List[Cell]:
     world_map: List[List[Cell]] = [
@@ -133,9 +158,11 @@ def a_star(start: Tuple[int, int], goal: Tuple[int, int]) -> List[Cell]:
         update_cell_state(heap, current_cell, current_move_mode, world_map)
 
     while heap.size and current_cell != goal_cell:
-        current_cell = heap.pop()
-        if current_cell.visited:
+        next_cell = heap.pop()
+        if next_cell.visited:
             continue
+        check_and_go(current_cell, next_cell)
+        current_cell = next_cell
         current_cell.visited = True
         print(current_cell.x, current_cell.y)
 
@@ -143,21 +170,15 @@ def a_star(start: Tuple[int, int], goal: Tuple[int, int]) -> List[Cell]:
         if try_switch_mode(heap, current_cell, current_move_mode):
             current_move_mode = switch_move_mode(current_move_mode)
             update_cell_state(heap, current_cell, current_move_mode, world_map)
-    
-    path: List[Cell] = [goal_cell]
-    next_cell: Cell = goal_cell.parent
-    while next_cell:
-        path.append(next_cell)
-        next_cell = next_cell.parent
-    
-    return path[::-1]
+
+    return get_path(goal_cell)
 
 
 def main():
     perception_radius = int(input())
     gollum_position = tuple(map(int, input().split()))
     answer: int = -1
-    first_part: List[Cell] = a_star((0,0), gollum_position)
+    first_part: List[Cell] = a_star((0, 0), gollum_position)
 
     if len(first_part) > 1:
         print(*gollum_position)
@@ -169,10 +190,9 @@ def main():
         second_part: List[Cell] = a_star((gollum_position, mount_position))
         if len(second_part) > 1:
             answer = second_part[-1].cost
-    
+
     print("e", answer)
 
-        
 
 if __name__ == "__main__":
     main()
