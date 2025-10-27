@@ -98,14 +98,16 @@ def switch_move_mode(move_mode: int) -> int:
     return WITH_RING if move_mode == WITHOUT_RING else WITHOUT_RING
 
 
-def update_cell_state(heap: Heap, cell: Cell, move_mode: int, world_map: List[List[Cell]]) -> List[Cell]:
+def update_cell_state(
+    heap: Heap, cell: Cell, move_mode: int, world_map: List[List[Cell]]
+) -> None:
     allowed_moves = read_obstacles(cell)
     allowed_cells = [world_map[x][y] for x, y in allowed_moves]
     update_neighbours(heap, cell, allowed_cells, move_mode)
-    return allowed_cells
 
 
-def try_switch_mode(cell: Cell, current_move_mode: int)-> bool:
+
+def try_switch_mode(cell: Cell, current_move_mode: int) -> bool:
     can_switch = switch_move_mode(current_move_mode) & cell.move_mode
     if can_switch:
         new_mode = switch_move_mode(current_move_mode)
@@ -114,48 +116,63 @@ def try_switch_mode(cell: Cell, current_move_mode: int)-> bool:
     return False
 
 
-def main():
+def a_star(start: Tuple[int, int], goal: Tuple[int, int]) -> List[Cell]:
     world_map: List[List[Cell]] = [
         Cell(i, j) for i in range(MAP_SIZE) for j in range(MAP_SIZE)
     ]
-    world_map[0][0] = Cell(0, 0, 0, WITH_RING | WITHOUT_RING, True)
-
-    perception_radius = int(input())
-    goal_x, goal_y = map(int, input().split())
-    world_map[goal_x][goal_y] = Cell(goal_x, goal_y)
-    goal_cell: Cell = world_map[goal_x][goal_y]
-
-    is_mount_detected = False
-    current_cell: Cell = world_map[0][0]
+    world_map[start[0]][start[1]] = Cell(
+        0, 0, 0, WITH_RING | WITHOUT_RING, True
+    )
+    current_cell: Cell = world_map[start[0]][start[1]]
     current_move_mode = WITHOUT_RING
+    goal_cell: Cell = world_map[goal[0]][goal[1]]
     heap: Heap = Heap(goal_cell)
-
     update_cell_state(heap, current_cell, current_move_mode, world_map)
     if try_switch_mode(heap, current_cell, current_move_mode):
         current_move_mode = switch_move_mode(current_move_mode)
         update_cell_state(heap, current_cell, current_move_mode, world_map)
 
-    while heap.size and not (is_mount_detected and current_cell == goal_cell):
+    while heap.size and current_cell != goal_cell:
         current_cell = heap.pop()
         if current_cell.visited:
             continue
         current_cell.visited = True
         print(current_cell.x, current_cell.y)
 
-        allowed_cells = update_cell_state(heap, current_cell, current_move_mode)
-        if not is_mount_detected and current_cell == goal_cell:
-            is_mount_detected = True
-            x, y = map(int, input().split()[-2:])
-            goal_cell = world_map[x][y]
-            heap = Heap(goal_cell)
-            for cell in allowed_cells:
-                cell.visited = False
-                heap.push(cell)
-
+        update_cell_state(heap, current_cell, current_move_mode)
         if try_switch_mode(heap, current_cell, current_move_mode):
             current_move_mode = switch_move_mode(current_move_mode)
             update_cell_state(heap, current_cell, current_move_mode, world_map)
+    
+    path: List[Cell] = [goal_cell]
+    next_cell: Cell = goal_cell.parent
+    while next_cell:
+        path.append(next_cell)
+        next_cell = next_cell.parent
+    
+    return path[::-1]
 
+
+def main():
+    perception_radius = int(input())
+    gollum_position = tuple(map(int, input().split()))
+    answer: int = -1
+    first_part: List[Cell] = a_star((0,0), gollum_position)
+
+    if len(first_part) > 1:
+        print(*gollum_position)
+        read_obstacles(first_part[-1])
+        mount_position = tuple(map(int, input().split()[-2:]))
+        print(first_part[-1].parent.x, first_part[-1].parent.y)
+        read_obstacles(first_part[-1])
+        print(*gollum_position)
+        second_part: List[Cell] = a_star((gollum_position, mount_position))
+        if len(second_part) > 1:
+            answer = second_part[-1].cost
+    
+    print("e", answer)
+
+        
 
 if __name__ == "__main__":
     main()
