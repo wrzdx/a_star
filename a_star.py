@@ -217,12 +217,12 @@ def a_star(
 def main():
     perception_radius = int(input())
     gollum_position = tuple(map(int, input().split()))
-    answer: int = -1
+    answer = -1
     first_part: List[Cell] = []
     first_part, current_move_mode = a_star(
         (0, 0), gollum_position, perception_radius
     )
-    if len(first_part) > -1:
+    if len(first_part) > 1:
         print(*gollum_position)
         read_obstacles(first_part[-1])
         mount_position = tuple(map(int, input().split()[-2:]))

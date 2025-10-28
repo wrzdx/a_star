@@ -155,12 +155,12 @@ class Interactor:
         return answer, history
 
 
-interactor = Interactor(1, (7, 2), (4, 12))
-interactor.setToken(4, 3, "O")
-interactor.setToken(2, 9, "O")
-interactor.setToken(6, 8, "U")
-interactor.setToken(9, 5, "W")
+interactor = Interactor(1, (5, 5), (6, 6))
+interactor.setToken(2, 0, "O")
+interactor.setToken(1, 1, "O")
+interactor.setToken(0, 3, "U")
+# interactor.setToken(9, 5, "W")
 interactor.update_map(False)
 answer, history = interactor.start()
-print(history)
+# print(history)
 print(answer)
