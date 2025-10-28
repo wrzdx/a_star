@@ -98,7 +98,7 @@ def update_neighbours(
     ]
     for cell in allowed_cells:
         cell.move_mode |= move_mode
-        if (current_cell.x, current_cell.y) in cells_to_move:
+        if (cell.x, cell.y) in cells_to_move:
             new_cost = current_cell.cost + 1
             if new_cost < cell.cost:
                 cell.cost = new_cost
@@ -222,7 +222,6 @@ def main():
     first_part, current_move_mode = a_star(
         (0, 0), gollum_position, perception_radius
     )
-    current_move_mode = WITHOUT_RING
     if len(first_part) > -1:
         print(*gollum_position)
         read_obstacles(first_part[-1])
@@ -239,7 +238,7 @@ def main():
         )
         if len(second_part) > 1:
             answer = second_part[-1].cost
-            print(*(first_part + second_part))
+            # print(*(first_part + second_part))
 
     print("e", answer)
 
