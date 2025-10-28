@@ -138,6 +138,8 @@ class Interactor:
                 break
             if "e" in line:
                 answer = int(line.split()[-1])
+                line = proc.stdout.readline().strip()
+                history += line + "\n"
                 break
 
             if "rr" == line:
@@ -160,4 +162,5 @@ interactor.setToken(6, 8, "U")
 interactor.setToken(9, 5, "W")
 interactor.update_map(False)
 answer, history = interactor.start()
-print(history, answer)
+print(history)
+print(answer)

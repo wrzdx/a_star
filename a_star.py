@@ -237,11 +237,11 @@ def main():
             current_move_mode,
         )
         if len(second_part) > 1:
-            answer = second_part[-1].cost
-            # print(*(first_part + second_part))
-
+            answer = second_part[-1].cost + first_part[-1].cost
+            
+    
     print("e", answer)
-
+    # print(*[(cell.x, cell.y) for cell in first_part + second_part[1:]])
 
 if __name__ == "__main__":
     main()
