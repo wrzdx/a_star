@@ -145,7 +145,7 @@ def check_and_go(
 ) -> int:
     if current != next_cell.parent:
         while current.parent:
-            current_move_mode = try_switch_mode(current, current_move_mode)
+            current_move_mode = try_switch_mode(current.parent, current_move_mode)
             current = current.parent
             print(current.x, current.y)
             read_obstacles(current)
@@ -241,7 +241,6 @@ def main():
             
     
     print("e", answer)
-    # print(*[(cell.x, cell.y) for cell in first_part + second_part[1:]])
+    print(*[(cell.x, cell.y) for cell in first_part + second_part[1:]])
 
-if __name__ == "__main__":
-    main()
+main()
