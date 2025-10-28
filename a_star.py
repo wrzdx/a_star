@@ -233,8 +233,8 @@ def main():
         second_part, current_move_mode = a_star(
             gollum_position,
             mount_position,
-            current_move_mode,
             perception_radius,
+            current_move_mode,
         )
         if len(second_part) > 1:
             answer = second_part[-1].cost
