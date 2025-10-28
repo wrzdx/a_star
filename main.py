@@ -57,20 +57,22 @@ class Heap:
 
 
 def read_obstacles(
-    current_cell: Cell, world_map: List[List[Cell]] | None = None
+    current_cell: Cell,
+    world_map: List[List[Cell]] | None = None,
+    radius: int = 1,
 ) -> List[Tuple[int, int]]:
     p = int(input())
     allowed_moves = []
-    directions = [
-        (1, 0),  # Down
-        (0, 1),  # Right
-        (-1, 0),  # Up
-        (0, -1),  # Left
-    ]
-    for dx, dy in directions:
-        x = current_cell.x + dx
-        y = current_cell.y + dy
-        if x >= 0 and x < MAP_SIZE and y >= 0 and y < MAP_SIZE:
+    for x in range(current_cell.x - radius, current_cell.x + radius + 1):
+        if x < 0 or x >= MAP_SIZE:
+            continue
+        for y in range(current_cell.y - radius, current_cell.y + radius + 1):
+            if (
+                y < 0
+                or y >= MAP_SIZE
+                or (x == current_cell.x and y == current_cell.y)
+            ):
+                continue
             allowed_moves.append((x, y))
     for i in range(p):
         x, y, token = input().split()
@@ -88,15 +90,20 @@ def update_neighbours(
     allowed_cells: List[Cell],
     move_mode: int,
 ) -> None:
+    cells_to_move = [
+        (current_cell.x + 1, current_cell.y),
+        (current_cell.x, current_cell.y + 1),
+        (current_cell.x - 1, current_cell.y),
+        (current_cell.x, current_cell.y - 1),
+    ]
     for cell in allowed_cells:
-        new_cost = current_cell.cost + 1
-        if new_cost < cell.cost:
-            cell.cost = new_cost
-            cell.parent = current_cell
-            cell.move_mode = move_mode
-            heap.push(cell)
-        elif new_cost == cell.cost and cell.parent == current_cell:
-            cell.move_mode |= move_mode
+        cell.move_mode |= move_mode
+        if (current_cell.x, current_cell.y) in cells_to_move:
+            new_cost = current_cell.cost + 1
+            if new_cost < cell.cost:
+                cell.cost = new_cost
+                cell.parent = current_cell
+                heap.push(cell)
 
 
 def switch_move_mode(move_mode: int) -> int:
@@ -104,9 +111,13 @@ def switch_move_mode(move_mode: int) -> int:
 
 
 def update_cell_state(
-    heap: Heap, cell: Cell, move_mode: int, world_map: List[List[Cell]]
+    heap: Heap,
+    cell: Cell,
+    move_mode: int,
+    radius: int,
+    world_map: List[List[Cell]],
 ) -> None:
-    allowed_moves = read_obstacles(cell, world_map)
+    allowed_moves = read_obstacles(cell, world_map, radius)
     allowed_cells = [world_map[x][y] for x, y in allowed_moves]
     update_neighbours(heap, cell, allowed_cells, move_mode)
 
@@ -151,6 +162,7 @@ def check_and_go(
 def a_star(
     start: Tuple[int, int],
     goal: Tuple[int, int],
+    radius: int,
     move_mode: int = WITHOUT_RING,
 ) -> Tuple[List[Cell], int]:
     world_map: List[List[Cell]] = [
@@ -163,12 +175,14 @@ def a_star(
     current_move_mode = move_mode
     goal_cell: Cell = world_map[goal[0]][goal[1]]
     heap: Heap = Heap(goal_cell)
-    update_cell_state(heap, current_cell, current_move_mode, world_map)
+    update_cell_state(heap, current_cell, current_move_mode, radius, world_map)
     can_switch = switch_move_mode(current_move_mode) & current_cell.move_mode
     if can_switch:
         current_move_mode = switch_move_mode(current_move_mode)
         print("r" if current_move_mode == WITH_RING else "rr")
-        update_cell_state(heap, current_cell, current_move_mode, world_map)
+        update_cell_state(
+            heap, current_cell, current_move_mode, radius, world_map
+        )
 
     while heap.size:
         next_cell = heap.pop()
@@ -184,14 +198,18 @@ def a_star(
             break
         print(current_cell.x, current_cell.y)
 
-        update_cell_state(heap, current_cell, current_move_mode, world_map)
+        update_cell_state(
+            heap, current_cell, current_move_mode, radius, world_map
+        )
         can_switch = (
             switch_move_mode(current_move_mode) & current_cell.move_mode
         )
         if can_switch:
             current_move_mode = switch_move_mode(current_move_mode)
             print("r" if current_move_mode == WITH_RING else "rr")
-            update_cell_state(heap, current_cell, current_move_mode, world_map)
+            update_cell_state(
+                heap, current_cell, current_move_mode, radius, world_map
+            )
 
     return get_path(goal_cell), current_move_mode
 
@@ -200,9 +218,10 @@ def main():
     perception_radius = int(input())
     gollum_position = tuple(map(int, input().split()))
     answer: int = -1
-    first_part: List[Cell] = [Cell(7, 2)]
-    first_part[0].parent = Cell(6, 2)
-    # first_part, current_move_mode = a_star((0, 0), gollum_position)
+    first_part: List[Cell] = []
+    first_part, current_move_mode = a_star(
+        (0, 0), gollum_position, perception_radius
+    )
     current_move_mode = WITHOUT_RING
     if len(first_part) > -1:
         print(*gollum_position)
@@ -213,10 +232,14 @@ def main():
         print(*gollum_position)
         second_part: List[Cell] = []
         second_part, current_move_mode = a_star(
-            gollum_position, mount_position, current_move_mode
+            gollum_position,
+            mount_position,
+            current_move_mode,
+            perception_radius,
         )
         if len(second_part) > 1:
             answer = second_part[-1].cost
+            print(*(first_part + second_part))
 
     print("e", answer)
 
