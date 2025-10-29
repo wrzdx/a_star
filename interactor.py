@@ -15,21 +15,21 @@ def neuman_zone(x: int, y: int, radius: int) -> List[Tuple[int, int]]:
     return cells
 
 
-def moore_zone(
-    x: int, y: int, radius: int, with_ears: bool
-) -> List[Tuple[int, int]]:
+def moore_zone(x: int, y: int, radius: int, with_ears: bool) -> List[Tuple[int, int]]:
     cells = []
     for i in range(x - radius, x + radius + 1):
         for j in range(y - radius, y + radius + 1):
             cells.append((i, j))
 
     if with_ears:
-        cells.extend([
-            (x - radius - 1, y - radius - 1),
-            (x - radius - 1, y + radius + 1),
-            (x + radius + 1, y - radius - 1),
-            (x + radius + 1, y + radius + 1),
-        ])
+        cells.extend(
+            [
+                (x - radius - 1, y - radius - 1),
+                (x - radius - 1, y + radius + 1),
+                (x + radius + 1, y - radius - 1),
+                (x + radius + 1, y + radius + 1),
+            ]
+        )
     return cells
 
 
@@ -53,9 +53,7 @@ class Interactor:
         self,
         radius: int,
     ):
-        self.world_map = [
-            [" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)
-        ]
+        self.world_map = [[" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)]
         self.with_ring = False
         self.radius = radius
         self.gollum = (-1, -1)
@@ -86,9 +84,7 @@ class Interactor:
                         ):
                             self.world_map[x][y] = "P"
 
-    def get_perceptable_neighbours(
-        self, x: int, y: int
-    ) -> List[Tuple[int, int]]:
+    def get_perceptable_neighbours(self, x: int, y: int) -> List[Tuple[int, int]]:
         return [
             (i, j)
             for i, j in moore_zone(x, y, self.radius, False)
@@ -125,7 +121,7 @@ class Interactor:
         answer = -1
         history = ""
         proc = subprocess.Popen(
-            ["python", "a_star.py"],
+            ["python", "backtracking.py"],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True,
@@ -150,8 +146,7 @@ class Interactor:
                 self.set_token(self.gollum[0], self.gollum[1], " ")
                 self.gollum = (-1, -1)
                 response += (
-                    "My precious! Mount Doom is "
-                    + f"{self.mount[0]} {self.mount[1]}\n"
+                    "My precious! Mount Doom is " + f"{self.mount[0]} {self.mount[1]}\n"
                 )
             history += response
             proc.stdin.write(response)
@@ -164,7 +159,7 @@ class Interactor:
             if "e" in line:
                 answer = int(line.split()[-1])
                 line = proc.stdout.readline().strip()
-                history = line + "\n"
+                history += line + "\n"
                 break
 
             if "rr" == line:
@@ -195,7 +190,7 @@ def print_map_colored(world_map, path_str=None):
     colors = {
         " ": "\033[90m·\033[0m",
         "P": "\033[94mP\033[0m",
-        "O": "\033[91mO\033[0m", 
+        "O": "\033[91mO\033[0m",
         "N": "\033[95mN\033[0m",
         "W": "\033[93mW\033[0m",
         "M": "\033[92mM\033[0m",
@@ -206,15 +201,16 @@ def print_map_colored(world_map, path_str=None):
     # Создаем копию для отображения
     display_map = [row[:] for row in world_map]
     path = []
-    for pair in path_str.split(") ("):
-        clean = pair.strip('()\n')
-        x, y = map(int, clean.split(','))
-        path.append((x, y))
+    if path_str:
+        for pair in path_str.split(") ("):
+            clean = pair.strip("()\n")
+            x, y = map(int, clean.split(","))
+            path.append((x, y))
     # Отмечаем путь если передан
     if path:
         for cell in path:
             x, y = cell
-                
+
             if 0 <= y < len(display_map) and 0 <= x < len(display_map[0]):
                 # Ставим '*' только на пустых клетках, чтобы не перезаписать важные объекты
                 if display_map[x][y] == " ":
@@ -227,15 +223,27 @@ def print_map_colored(world_map, path_str=None):
         print(f"{i:2}  " + "  ".join(colored_row))
 
 
-interactor = Interactor(randint(1,2))
+interactor = Interactor(1)
 interactor.set_random_tokens()
+# interactor.set_token(4, 3, "O")
+# interactor.set_token(2, 9, "O")
+# interactor.set_token(6, 8, "U")
+# interactor.set_token(7, 2, "G")
+# interactor.set_token(0, 9, "W")
+# interactor.set_token(0, 12, "M")
+# interactor.set_token(4, 12, "N")
+# interactor.set_token(12, 0, "C")
+
+interactor.update_map(False)
+
 x, y = interactor.gollum
 print(interactor.radius, x, y)
 
 answer, history = interactor.start()
 interactor.update_map(False)
 interactor.world_map[x][y] = "G"
-print_map_colored(interactor.world_map, history)
-print()
-print(history)
+path = history.splitlines()[-1]
+print_map_colored(interactor.world_map, path)
+# print(path)
+# print(history)
 print(answer)
