@@ -185,6 +185,7 @@ def main():
     gollum_position = tuple(map(int, input().split()))
     answer = -1
     first_part: List[Cell] = []
+    second_part: List[Cell] = []
     first_part, current_move_mode = backtracking(
         (0, 0), gollum_position, perception_radius, WITHOUT_RING
     )
@@ -195,7 +196,6 @@ def main():
         print(first_part[-1].parent.x, first_part[-1].parent.y)
         read_obstacles(first_part[-1])
         print(*gollum_position)
-        second_part: List[Cell] = []
         second_part, current_move_mode = backtracking(
             gollum_position,
             mount_position,

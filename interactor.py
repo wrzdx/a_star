@@ -15,21 +15,21 @@ def neuman_zone(x: int, y: int, radius: int) -> List[Tuple[int, int]]:
     return cells
 
 
-def moore_zone(x: int, y: int, radius: int, with_ears: bool) -> List[Tuple[int, int]]:
+def moore_zone(
+    x: int, y: int, radius: int, with_ears: bool
+) -> List[Tuple[int, int]]:
     cells = []
     for i in range(x - radius, x + radius + 1):
         for j in range(y - radius, y + radius + 1):
             cells.append((i, j))
 
     if with_ears:
-        cells.extend(
-            [
-                (x - radius - 1, y - radius - 1),
-                (x - radius - 1, y + radius + 1),
-                (x + radius + 1, y - radius - 1),
-                (x + radius + 1, y + radius + 1),
-            ]
-        )
+        cells.extend([
+            (x - radius - 1, y - radius - 1),
+            (x - radius - 1, y + radius + 1),
+            (x + radius + 1, y - radius - 1),
+            (x + radius + 1, y + radius + 1),
+        ])
     return cells
 
 
@@ -53,7 +53,9 @@ class Interactor:
         self,
         radius: int,
     ):
-        self.world_map = [[" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)]
+        self.world_map = [
+            [" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)
+        ]
         self.with_ring = False
         self.radius = radius
         self.gollum = (-1, -1)
@@ -84,7 +86,9 @@ class Interactor:
                         ):
                             self.world_map[x][y] = "P"
 
-    def get_perceptable_neighbours(self, x: int, y: int) -> List[Tuple[int, int]]:
+    def get_perceptable_neighbours(
+        self, x: int, y: int
+    ) -> List[Tuple[int, int]]:
         return [
             (i, j)
             for i, j in moore_zone(x, y, self.radius, False)
@@ -114,14 +118,13 @@ class Interactor:
             self.set_token_randomly(token)
         self.update_map(False)
 
-    def start(self):
+    def start(self, algorithm: str):
         if self.mount == (-1, -1) or self.gollum == (-1, -1):
-            print("Goals are not defined")
-            return -1, []
+            return -1, "Goals are not defined\nFailed"
         answer = -1
         history = ""
         proc = subprocess.Popen(
-            ["python", "backtracking.py"],
+            ["python", algorithm],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             text=True,
@@ -146,7 +149,8 @@ class Interactor:
                 self.set_token(self.gollum[0], self.gollum[1], " ")
                 self.gollum = (-1, -1)
                 response += (
-                    "My precious! Mount Doom is " + f"{self.mount[0]} {self.mount[1]}\n"
+                    "My precious! Mount Doom is "
+                    + f"{self.mount[0]} {self.mount[1]}\n"
                 )
             history += response
             proc.stdin.write(response)
@@ -166,22 +170,28 @@ class Interactor:
                 self.update_map(False)
                 if self.world_map[x][y] in "POUNW" or not with_ring:
                     proc.terminate()
-                    return -1, history + "Failed"
+                    return -1, history + "BadSwitch\nFailed"
                 with_ring = False
                 continue
             if "r" == line:
                 self.update_map(True)
                 if self.world_map[x][y] in "POUNW" or with_ring:
                     proc.terminate()
-                    return -1, history + "Failed"
+                    return -1, history + "BadSwitch\nFailed"
                 with_ring = True
                 continue
 
-            x, y = map(int, line.split())
-            if self.world_map[x][y] in "POUNW":
+            new_x, new_y = map(int, line.split())
+            if (
+                self.world_map[new_x][new_y] in "POUNW"
+                or (abs(new_x - x) + abs(new_y - y)) != 1
+            ):
                 proc.terminate()
-                return -1, history + "Failed"
-
+                return (
+                    -1,
+                    history + f"{new_x=} {new_y=} {x=} {y=}BadMove\nFailed",
+                )
+            x, y = new_x, new_y
         proc.terminate()
         return answer, history
 
@@ -201,7 +211,7 @@ def print_map_colored(world_map, path_str=None):
     # Создаем копию для отображения
     display_map = [row[:] for row in world_map]
     path = []
-    if path_str:
+    if path_str and path_str != "Failed":
         for pair in path_str.split(") ("):
             clean = pair.strip("()\n")
             x, y = map(int, clean.split(","))
@@ -223,27 +233,69 @@ def print_map_colored(world_map, path_str=None):
         print(f"{i:2}  " + "  ".join(colored_row))
 
 
-interactor = Interactor(1)
-interactor.set_random_tokens()
-# interactor.set_token(4, 3, "O")
-# interactor.set_token(2, 9, "O")
-# interactor.set_token(6, 8, "U")
-# interactor.set_token(7, 2, "G")
-# interactor.set_token(0, 9, "W")
-# interactor.set_token(0, 12, "M")
-# interactor.set_token(4, 12, "N")
-# interactor.set_token(12, 0, "C")
+A_STAR = "a_star.py"
+BACKTRACKING = "backtracking.py"
+for i in range(1, 101):
+    interactor = Interactor(randint(1, 2))
+    interactor.set_random_tokens()
 
-interactor.update_map(False)
+    x, y = interactor.gollum
+    interactor.set_token(x, y, "G")
+    answer0, history0 = interactor.start(A_STAR)
+    path0 = history0.splitlines()[-1]
+    if path0 == "Failed":
+        interactor.update_map(False)
+        interactor.set_token(x, y, "G")
 
-x, y = interactor.gollum
-print(interactor.radius, x, y)
+        print(interactor.radius, x, y)
+        print_map_colored(interactor.world_map, path0)
+        # print(path)
+        # print(history)
+        print(answer0, A_STAR)
+        break
 
-answer, history = interactor.start()
-interactor.update_map(False)
-interactor.world_map[x][y] = "G"
-path = history.splitlines()[-1]
-print_map_colored(interactor.world_map, path)
-# print(path)
+    interactor.update_map(False)
+    interactor.set_token(x, y, "G")
+    answer1, history1 = interactor.start(BACKTRACKING)
+    path1 = history1.splitlines()[-1]
+    if path1 == "Failed":
+        interactor.update_map(False)
+        interactor.set_token(x, y, "G")
+
+        print(interactor.radius, x, y)
+        print_map_colored(interactor.world_map, path1)
+        # print(path)
+        # print(history)
+        print(answer1, BACKTRACKING)
+        break
+
+    if answer1 != answer0:
+        interactor.update_map(False)
+        interactor.set_token(x, y, "G")
+        print(interactor.radius, x, y)
+        print_map_colored(interactor.world_map, path1)
+        # print(path)
+        # print(history)
+        print(answer0, answer1, A_STAR + " + " + BACKTRACKING)
+
+    print(f"\rПрогресс: {i}%", end="", flush=True)
+# interactor = Interactor(2)
+# # interactor.set_random_tokens()
+# interactor.set_token(1, 0, "C")
+# interactor.set_token(3, 8, "U")
+# interactor.set_token(4, 12, "W")
+# interactor.set_token(5, 5, "M")
+# interactor.set_token(10, 10, "G")
+# interactor.update_map(False)
+
+# x, y = interactor.gollum
+# print(interactor.radius, x, y)
+
+# answer, history = interactor.start()
+# interactor.update_map(False)
+# interactor.set_token(x, y, "G")
+# path = history.splitlines()[-1]
+# print_map_colored(interactor.world_map, path)
+# # print(path)
 # print(history)
-print(answer)
+# print(answer)
