@@ -94,7 +94,7 @@ def update_cell_state(
 def try_switch_mode(cell: Cell, current_move_mode: int) -> int:
     if not (cell.move_mode & current_move_mode):
         current_move_mode = switch_move_mode(current_move_mode)
-        print("r" if current_move_mode == WITH_RING else "rr")
+        print("r" if current_move_mode == WITH_RING else "rr", flush=True)
         read_obstacles(cell)
     return current_move_mode
 
@@ -114,13 +114,13 @@ def check_and_go(current: Cell, next_cell: Cell, current_move_mode: int) -> int:
         while current.parent:
             current_move_mode = try_switch_mode(current.parent, current_move_mode)
             current = current.parent
-            print(current.x, current.y)
+            print("m", current.x, current.y, flush=True)
             read_obstacles(current)
 
         path = get_path(next_cell)[1:-1]
         for cell in path:
             current_move_mode = try_switch_mode(cell, current_move_mode)
-            print(cell.x, cell.y)
+            print("m", cell.x, cell.y, flush=True)
             read_obstacles(cell)
 
     return current_move_mode
@@ -137,23 +137,23 @@ def backtrack(
     if current == goal:
         return
     if current != start:
-        print(current.x, current.y)
+        print("m", current.x, current.y, flush=True)
     updated = update_cell_state(current, move_mode, radius, world_map)
     new_move_mode = move_mode
     can_switch = switch_move_mode(new_move_mode) & current.move_mode
     if can_switch:
         new_move_mode = switch_move_mode(new_move_mode)
-        print("r" if new_move_mode == WITH_RING else "rr")
+        print("r" if new_move_mode == WITH_RING else "rr", flush=True)
         updated += update_cell_state(current, new_move_mode, radius, world_map)
     for cell in updated:
         new_move_mode = try_switch_mode(cell, new_move_mode)
         backtrack(cell, goal, radius, world_map, new_move_mode, start)
 
     if move_mode != new_move_mode:
-        print("r" if move_mode == WITH_RING else "rr")
+        print("r" if move_mode == WITH_RING else "rr", flush=True)
         read_obstacles(current)
     if current != start:
-        print(current.parent.x, current.parent.y)
+        print("m", current.parent.x, current.parent.y, flush=True)
         read_obstacles(current.parent)
 
 
@@ -190,12 +190,12 @@ def main():
         (0, 0), gollum_position, perception_radius, WITHOUT_RING
     )
     if len(first_part) > 1:
-        print(*gollum_position)
+        print("m", *gollum_position, flush=True)
         read_obstacles(first_part[-1])
         mount_position = tuple(map(int, input().split()[-2:]))
-        print(first_part[-1].parent.x, first_part[-1].parent.y)
+        print("m", first_part[-1].parent.x, first_part[-1].parent.y, flush=True)
         read_obstacles(first_part[-1])
-        print(*gollum_position)
+        print("m", *gollum_position, flush=True)
         second_part, current_move_mode = backtracking(
             gollum_position,
             mount_position,
@@ -203,9 +203,9 @@ def main():
             current_move_mode,
         )
         if len(second_part) > 1:
+            print("m", *mount_position)
             answer = second_part[-1].cost + first_part[-1].cost
-
-    print("e", answer)
+    print("e", answer, flush=True)
     print(*[(cell.x, cell.y) for cell in first_part[:-1] + second_part])
 
 

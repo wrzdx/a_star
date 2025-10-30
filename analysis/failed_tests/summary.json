@@ -1,0 +1,15 @@
+{
+  "seed": 0,
+  "total_failures": 26,
+  "breakdown": {
+    "astar_v1": {
+      "false_unsolvable": 16
+    },
+    "astar_v2": {
+      "false_unsolvable": 4
+    },
+    "backtracking_v1": {
+      "false_unsolvable": 6
+    }
+  }
+}

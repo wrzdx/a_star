@@ -1,7 +1,9 @@
-from random import randint
+import os
+import random
 import subprocess
 from typing import List, Tuple
-
+import time
+from statistics import mean, median, stdev, mode
 
 MAP_SIZE: int = 13
 
@@ -99,10 +101,13 @@ class Interactor:
         ]
 
     def set_token_randomly(self, token: str):
-        x, y = randint(0, MAP_SIZE - 1), randint(0, MAP_SIZE - 1)
+        x, y = random.randint(0, MAP_SIZE - 1), random.randint(0, MAP_SIZE - 1)
         zone = set(get_zone(x, y, token, False) + get_zone(x, y, token, True))
         while (0, 0) in zone or self.world_map[x][y] != " ":
-            x, y = randint(0, MAP_SIZE - 1), randint(0, MAP_SIZE - 1)
+            x, y = (
+                random.randint(0, MAP_SIZE - 1),
+                random.randint(0, MAP_SIZE - 1),
+            )
             zone = get_zone(x, y, token, False) + get_zone(x, y, token, True)
 
         for i, j in zone:
@@ -113,7 +118,12 @@ class Interactor:
         self.world_map[x][y] = token
 
     def set_random_tokens(self):
-        tokens = randint(1, 2) * "O" + "U" + "N" * randint(0, 1) + "WGCM"
+        tokens = (
+            random.randint(1, 2) * "O"
+            + "U"
+            + "N" * random.randint(0, 1)
+            + "WGCM"
+        )
         for token in tokens:
             self.set_token_randomly(token)
         self.update_map(False)
@@ -152,10 +162,9 @@ class Interactor:
                     "My precious! Mount Doom is "
                     + f"{self.mount[0]} {self.mount[1]}\n"
                 )
-            history += response
             proc.stdin.write(response)
             proc.stdin.flush()
-
+            history += response
             line = proc.stdout.readline().strip()
             history += line + "\n"
             if not line:
@@ -181,7 +190,7 @@ class Interactor:
                 with_ring = True
                 continue
 
-            new_x, new_y = map(int, line.split())
+            new_x, new_y = map(int, line.split()[1:])
             if (
                 self.world_map[new_x][new_y] in "POUNW"
                 or (abs(new_x - x) + abs(new_y - y)) != 1
@@ -196,6 +205,103 @@ class Interactor:
         return answer, history
 
 
+A_STAR = "ee.py"
+BACKTRACKING = "backtracking.py"
+
+
+def run_comparison(number_of_runs: int = 10):
+    stats = {
+        "a_star": {"wins": 0, "losses": 0, "times": []},
+        "backtracking": {"wins": 0, "losses": 0, "times": []},
+    }
+
+    for i in range(1, number_of_runs + 1):
+        # Setup interactor with random tokens
+        interactor = Interactor(random.randint(1, 2))
+        interactor.set_random_tokens()
+        x, y = interactor.gollum
+
+        # A*
+        start_time = time.time()
+        answer0, history0 = interactor.start(A_STAR)
+        time0 = time.time() - start_time
+        path0 = history0.splitlines()[-1]
+
+        # Clear map for next run
+        interactor.update_map(False)
+        interactor.set_token(x, y, "G")
+
+        # Backtracking
+        start_time = time.time()
+        answer1, history1 = interactor.start(BACKTRACKING)
+        time1 = time.time() - start_time
+        path1 = history1.splitlines()[-1]
+
+        # Clear map for next run
+        interactor.update_map(False)
+        interactor.set_token(x, y, "G")
+        # Answer
+
+        interactor.radius = 5
+        answer2, history2 = interactor.start(A_STAR)
+
+        # Check for failures
+        if path0 == "Failed" or path1 == "Failed":
+            interactor.update_map(False)
+            interactor.set_token(x, y, "G")
+            print_map_colored(interactor.world_map)
+            break
+
+        # Update statistics
+        stats["a_star"]["wins"] += answer0 == answer2
+        stats["a_star"]["losses"] += answer0 != answer2
+        stats["a_star"]["times"].append(time0)
+
+        stats["backtracking"]["wins"] += answer1 == answer2
+        stats["backtracking"]["losses"] += answer1 != answer2
+        stats["backtracking"]["times"].append(time1)
+
+        print(
+            f"\rProgress: {100 * i / number_of_runs:.1f}%", end="", flush=True
+        )
+
+    return stats
+
+
+def print_statistics(stats):
+    print("\n" + "=" * 60)
+    print("Statistics:")
+    print("=" * 60)
+
+    for algo in ["a_star", "backtracking"]:
+        data = stats[algo]
+        total = data["wins"] + data["losses"]
+        win_rate = (data["wins"] / total * 100) if total > 0 else 0
+
+        print(f"\n{algo.upper()}:")
+        print(f"  Wins: {data['wins']}")
+        print(f"  Losses: {data['losses']}")
+        print(f"  Win Rate: {win_rate:.1f}%")
+
+        if data["times"]:
+            print("  Time Statistics (seconds):")
+            print(f"    mean = {mean(data['times']):.3f}")
+            print(f"    median = {median(data['times']):.3f}")
+            print(
+                f"    mode = {mode(map(lambda x: round(x, 3), data['times']))}"
+            )
+            print(f"    std = {stdev(data['times']):.3f}")
+
+
+# Run the comparison and print statistics
+# stats = run_comparison(10)
+# print_statistics(stats)
+# input("Нажмите Enter для выхода...")
+# interactor = Interactor(random.randint(1, 2))
+# interactor.set_random_tokens()
+# x, y = interactor.gollum
+
+
 def print_map_colored(world_map, path_str=None):
     colors = {
         " ": "\033[90m·\033[0m",
@@ -205,10 +311,9 @@ def print_map_colored(world_map, path_str=None):
         "W": "\033[93mW\033[0m",
         "M": "\033[92mM\033[0m",
         "G": "\033[96mG\033[0m",
-        "*": "\033[97m*\033[0m",  # путь
+        "*": "\033[97m*\033[0m",
     }
 
-    # Создаем копию для отображения
     display_map = [row[:] for row in world_map]
     path = []
     if path_str and path_str != "Failed":
@@ -216,13 +321,11 @@ def print_map_colored(world_map, path_str=None):
             clean = pair.strip("()\n")
             x, y = map(int, clean.split(","))
             path.append((x, y))
-    # Отмечаем путь если передан
     if path:
         for cell in path:
             x, y = cell
 
             if 0 <= y < len(display_map) and 0 <= x < len(display_map[0]):
-                # Ставим '*' только на пустых клетках, чтобы не перезаписать важные объекты
                 if display_map[x][y] == " ":
                     display_map[x][y] = "*"
 
@@ -233,69 +336,37 @@ def print_map_colored(world_map, path_str=None):
         print(f"{i:2}  " + "  ".join(colored_row))
 
 
-A_STAR = "a_star.py"
-BACKTRACKING = "backtracking.py"
-for i in range(1, 101):
-    interactor = Interactor(randint(1, 2))
-    interactor.set_random_tokens()
+# random.seed(int.from_bytes(os.urandom(8), 'big') + time.time_ns())
+# n = 100
+# for i in range(1, n + 1):
+#     interactor = Interactor(random.randint(1, 2))
+#     interactor.set_random_tokens()
+#     x, y = interactor.gollum
+#     answer, history = interactor.start(A_STAR)
+#     if history.splitlines()[-1] == "Failed":
+#         interactor.update_map(False)
+#         interactor.set_token(x, y, "G")
+#         print_map_colored(interactor.world_map, history.splitlines()[-1])
+#         print(f"Answer: {answer}")
+#         with open("history.txt", 'w', encoding='utf-8') as f:
+#             f.write(history)
+#         break
+#     print(f"\rProgress: {100 * i / n:.1f}%", end="")
 
-    x, y = interactor.gollum
-    interactor.set_token(x, y, "G")
-    answer0, history0 = interactor.start(A_STAR)
-    path0 = history0.splitlines()[-1]
-    if path0 == "Failed":
-        interactor.update_map(False)
-        interactor.set_token(x, y, "G")
-
-        print(interactor.radius, x, y)
-        print_map_colored(interactor.world_map, path0)
-        # print(path)
-        # print(history)
-        print(answer0, A_STAR)
-        break
-
-    interactor.update_map(False)
-    interactor.set_token(x, y, "G")
-    answer1, history1 = interactor.start(BACKTRACKING)
-    path1 = history1.splitlines()[-1]
-    if path1 == "Failed":
-        interactor.update_map(False)
-        interactor.set_token(x, y, "G")
-
-        print(interactor.radius, x, y)
-        print_map_colored(interactor.world_map, path1)
-        # print(path)
-        # print(history)
-        print(answer1, BACKTRACKING)
-        break
-
-    if answer1 != answer0:
-        interactor.update_map(False)
-        interactor.set_token(x, y, "G")
-        print(interactor.radius, x, y)
-        print_map_colored(interactor.world_map, path1)
-        # print(path)
-        # print(history)
-        print(answer0, answer1, A_STAR + " + " + BACKTRACKING)
-
-    print(f"\rПрогресс: {i}%", end="", flush=True)
-# interactor = Interactor(2)
-# # interactor.set_random_tokens()
-# interactor.set_token(1, 0, "C")
-# interactor.set_token(3, 8, "U")
-# interactor.set_token(4, 12, "W")
-# interactor.set_token(5, 5, "M")
-# interactor.set_token(10, 10, "G")
-# interactor.update_map(False)
-
-# x, y = interactor.gollum
-# print(interactor.radius, x, y)
-
-# answer, history = interactor.start()
-# interactor.update_map(False)
-# interactor.set_token(x, y, "G")
-# path = history.splitlines()[-1]
-# print_map_colored(interactor.world_map, path)
-# # print(path)
-# print(history)
-# print(answer)
+interactor = Interactor(2)
+interactor.set_token(12, 8, "G")
+interactor.set_token(1, 10, "M")
+interactor.set_token(8, 6, "C")
+interactor.set_token(9, 9, "W")
+interactor.set_token(0, 8, "U")
+interactor.set_token(4, 9, "N")
+interactor.set_token(2, 9, "O")
+interactor.set_token(10, 11, "O")
+interactor.update_map(False)
+x, y = interactor.gollum
+answer, history = interactor.start(A_STAR)
+interactor.set_token(x, y, "G")
+print_map_colored(interactor.world_map, history.splitlines()[-1])
+print(f"Answer: {answer}")
+with open("history.txt", "w", encoding="utf-8") as f:
+    f.write(history)
