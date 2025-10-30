@@ -294,12 +294,9 @@ def print_statistics(stats):
 
 
 # Run the comparison and print statistics
-# stats = run_comparison(10)
-# print_statistics(stats)
-# input("Нажмите Enter для выхода...")
-# interactor = Interactor(random.randint(1, 2))
-# interactor.set_random_tokens()
-# x, y = interactor.gollum
+stats = run_comparison(10)
+print_statistics(stats)
+
 
 
 def print_map_colored(world_map, path_str=None):
@@ -334,39 +331,3 @@ def print_map_colored(world_map, path_str=None):
     for i, row in enumerate(display_map):
         colored_row = [colors.get(str(cell), str(cell)) for cell in row]
         print(f"{i:2}  " + "  ".join(colored_row))
-
-
-# random.seed(int.from_bytes(os.urandom(8), 'big') + time.time_ns())
-# n = 100
-# for i in range(1, n + 1):
-#     interactor = Interactor(random.randint(1, 2))
-#     interactor.set_random_tokens()
-#     x, y = interactor.gollum
-#     answer, history = interactor.start(A_STAR)
-#     if history.splitlines()[-1] == "Failed":
-#         interactor.update_map(False)
-#         interactor.set_token(x, y, "G")
-#         print_map_colored(interactor.world_map, history.splitlines()[-1])
-#         print(f"Answer: {answer}")
-#         with open("history.txt", 'w', encoding='utf-8') as f:
-#             f.write(history)
-#         break
-#     print(f"\rProgress: {100 * i / n:.1f}%", end="")
-
-interactor = Interactor(2)
-interactor.set_token(12, 8, "G")
-interactor.set_token(1, 10, "M")
-interactor.set_token(8, 6, "C")
-interactor.set_token(9, 9, "W")
-interactor.set_token(0, 8, "U")
-interactor.set_token(4, 9, "N")
-interactor.set_token(2, 9, "O")
-interactor.set_token(10, 11, "O")
-interactor.update_map(False)
-x, y = interactor.gollum
-answer, history = interactor.start(A_STAR)
-interactor.set_token(x, y, "G")
-print_map_colored(interactor.world_map, history.splitlines()[-1])
-print(f"Answer: {answer}")
-with open("history.txt", "w", encoding="utf-8") as f:
-    f.write(history)

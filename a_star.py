@@ -1,4 +1,3 @@
-import sys
 from typing import List, Optional, Tuple
 from heapq import heappush, heappop
 
@@ -126,8 +125,7 @@ def update_cell_state(
 def try_switch_mode(cell: Cell, current_move_mode: int) -> int:
     if not (cell.move_mode & current_move_mode):
         current_move_mode = switch_move_mode(current_move_mode)
-        print("r" if current_move_mode == WITH_RING else "rr")
-        sys.stdout.flush()
+        print("r" if current_move_mode == WITH_RING else "rr", flush=True)
         read_obstacles(cell)
     return current_move_mode
 
@@ -151,15 +149,13 @@ def check_and_go(
                 current.parent, current_move_mode
             )
             current = current.parent
-            print("m", current.x, current.y)
-            sys.stdout.flush()
+            print("m", current.x, current.y, flush=True)
             read_obstacles(current)
 
         path = get_path(next_cell)[1:-1]
         for cell in path:
             current_move_mode = try_switch_mode(cell, current_move_mode)
-            print("m", cell.x, cell.y)
-            sys.stdout.flush()
+            print("m", cell.x, cell.y, flush=True)
             read_obstacles(cell)
 
     return current_move_mode
@@ -186,8 +182,7 @@ def a_star(
     can_switch = switch_move_mode(current_move_mode) & current_cell.move_mode
     if can_switch:
         current_move_mode = switch_move_mode(current_move_mode)
-        print("r" if current_move_mode == WITH_RING else "rr")
-        sys.stdout.flush()
+        print("r" if current_move_mode == WITH_RING else "rr", flush=True)
         update_cell_state(
             heap, current_cell, current_move_mode, radius, world_map
         )
@@ -204,8 +199,8 @@ def a_star(
         current_cell.visited = True
         if current_cell == goal_cell:
             break
-        print("m", current_cell.x, current_cell.y)
-        sys.stdout.flush()
+        print("m", current_cell.x, current_cell.y, flush=True)
+
 
         update_cell_state(
             heap, current_cell, current_move_mode, radius, world_map
@@ -215,8 +210,7 @@ def a_star(
         )
         if can_switch:
             current_move_mode = switch_move_mode(current_move_mode)
-            print("r" if current_move_mode == WITH_RING else "rr")
-            sys.stdout.flush()
+            print("r" if current_move_mode == WITH_RING else "rr", flush=True)
             update_cell_state(
                 heap, current_cell, current_move_mode, radius, world_map
             )
@@ -234,15 +228,12 @@ def main():
         (0, 0), gollum_position, perception_radius
     )
     if len(first_part) > 1:
-        print("m", *gollum_position)
-        sys.stdout.flush()
+        print("m", *gollum_position, flush=True)
         read_obstacles(first_part[-1])
         mount_position = tuple(map(int, input().split()[-2:]))
-        print("m", first_part[-1].parent.x, first_part[-1].parent.y)
-        sys.stdout.flush()
+        print("m", first_part[-1].parent.x, first_part[-1].parent.y, flush=True)
         read_obstacles(first_part[-1])
-        print("m", *gollum_position)
-        sys.stdout.flush()
+        print("m", *gollum_position, flush=True)
         second_part, current_move_mode = a_star(
             gollum_position,
             mount_position,
@@ -251,11 +242,10 @@ def main():
             first_part[-1].move_mode,
         )
         if len(second_part) > 1:
-            print("m", *mount_position)
+            print("m", *mount_position, flush=True)
             answer = second_part[-1].cost + first_part[-1].cost
 
-    print("e", answer)
-    sys.stdout.flush()
+    print("e", answer, flush=True)
     print(*[(cell.x, cell.y) for cell in first_part[:-1] + second_part])
 
 

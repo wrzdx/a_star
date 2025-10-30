@@ -162,6 +162,7 @@ def backtracking(
     goal: Tuple[int, int],
     radius: int,
     move_mode: int,
+    move_mode_of_start: int = WITHOUT_RING | WITH_RING,
 ) -> Tuple[List[Cell], int]:
     world_map: List[List[Cell]] = [
         [Cell(i, j) for j in range(MAP_SIZE)] for i in range(MAP_SIZE)
@@ -171,7 +172,7 @@ def backtracking(
     goal_cell = world_map[goal[0]][goal[1]]
 
     start_cell.cost = 0
-    start_cell.move_mode = WITH_RING | WITHOUT_RING
+    start_cell.move_mode = move_mode_of_start
 
     backtrack(start_cell, goal_cell, radius, world_map, move_mode, start_cell)
     path = get_path(goal_cell)
@@ -201,6 +202,7 @@ def main():
             mount_position,
             perception_radius,
             current_move_mode,
+            first_part[-1].move_mode,
         )
         if len(second_part) > 1:
             print("m", *mount_position)
