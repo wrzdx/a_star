@@ -1,53 +1,10 @@
-import os
 import random
 import subprocess
 from typing import List, Tuple
-import time
-from statistics import mean, median, stdev, mode
+
+from utility import get_zone, moore_zone
 
 MAP_SIZE: int = 13
-
-
-def neuman_zone(x: int, y: int, radius: int) -> List[Tuple[int, int]]:
-    cells = []
-    for i in range(x - radius, x + radius + 1):
-        for j in range(y - radius, y + radius + 1):
-            if abs(x - i) + abs(y - j) <= radius:
-                cells.append((i, j))
-    return cells
-
-
-def moore_zone(
-    x: int, y: int, radius: int, with_ears: bool
-) -> List[Tuple[int, int]]:
-    cells = []
-    for i in range(x - radius, x + radius + 1):
-        for j in range(y - radius, y + radius + 1):
-            cells.append((i, j))
-
-    if with_ears:
-        cells.extend([
-            (x - radius - 1, y - radius - 1),
-            (x - radius - 1, y + radius + 1),
-            (x + radius + 1, y - radius - 1),
-            (x + radius + 1, y + radius + 1),
-        ])
-    return cells
-
-
-def get_zone(x: int, y: int, token: int, with_ring) -> List[Tuple[int, int]]:
-    if token == "O":
-        return neuman_zone(x, y, 1 - with_ring)
-    if token == "U":
-        return neuman_zone(x, y, 2 - with_ring)
-    if token == "N":
-        if with_ring:
-            return moore_zone(x, y, 2, False)
-        return moore_zone(x, y, 1, True)
-    if token == "W":
-        return moore_zone(x, y, 2, with_ring)
-
-    return [(x, y)]
 
 
 class Interactor:
@@ -55,9 +12,7 @@ class Interactor:
         self,
         radius: int,
     ):
-        self.world_map = [
-            [" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)
-        ]
+        self.world_map = [[" " for i in range(MAP_SIZE)] for j in range(MAP_SIZE)]
         self.with_ring = False
         self.radius = radius
         self.gollum = (-1, -1)
@@ -88,9 +43,7 @@ class Interactor:
                         ):
                             self.world_map[x][y] = "P"
 
-    def get_perceptable_neighbours(
-        self, x: int, y: int
-    ) -> List[Tuple[int, int]]:
+    def get_perceptable_neighbours(self, x: int, y: int) -> List[Tuple[int, int]]:
         return [
             (i, j)
             for i, j in moore_zone(x, y, self.radius, False)
@@ -118,12 +71,7 @@ class Interactor:
         self.world_map[x][y] = token
 
     def set_random_tokens(self):
-        tokens = (
-            random.randint(1, 2) * "O"
-            + "U"
-            + "N" * random.randint(0, 1)
-            + "WGCM"
-        )
+        tokens = random.randint(1, 2) * "O" + "U" + "N" * random.randint(0, 1) + "WGCM"
         for token in tokens:
             self.set_token_randomly(token)
         self.update_map(False)
@@ -159,8 +107,7 @@ class Interactor:
                 self.set_token(self.gollum[0], self.gollum[1], " ")
                 self.gollum = (-1, -1)
                 response += (
-                    "My precious! Mount Doom is "
-                    + f"{self.mount[0]} {self.mount[1]}\n"
+                    "My precious! Mount Doom is " + f"{self.mount[0]} {self.mount[1]}\n"
                 )
             proc.stdin.write(response)
             proc.stdin.flush()
@@ -203,131 +150,3 @@ class Interactor:
             x, y = new_x, new_y
         proc.terminate()
         return answer, history
-
-
-A_STAR = "ee.py"
-BACKTRACKING = "backtracking.py"
-
-
-def run_comparison(number_of_runs: int = 10):
-    stats = {
-        "a_star": {"wins": 0, "losses": 0, "times": []},
-        "backtracking": {"wins": 0, "losses": 0, "times": []},
-    }
-
-    for i in range(1, number_of_runs + 1):
-        # Setup interactor with random tokens
-        interactor = Interactor(random.randint(1, 2))
-        interactor.set_random_tokens()
-        x, y = interactor.gollum
-
-        # A*
-        start_time = time.time()
-        answer0, history0 = interactor.start(A_STAR)
-        time0 = time.time() - start_time
-        path0 = history0.splitlines()[-1]
-
-        # Clear map for next run
-        interactor.update_map(False)
-        interactor.set_token(x, y, "G")
-
-        # Backtracking
-        start_time = time.time()
-        answer1, history1 = interactor.start(BACKTRACKING)
-        time1 = time.time() - start_time
-        path1 = history1.splitlines()[-1]
-
-        # Clear map for next run
-        interactor.update_map(False)
-        interactor.set_token(x, y, "G")
-        # Answer
-
-        interactor.radius = 5
-        answer2, history2 = interactor.start(A_STAR)
-
-        # Check for failures
-        if path0 == "Failed" or path1 == "Failed":
-            interactor.update_map(False)
-            interactor.set_token(x, y, "G")
-            print_map_colored(interactor.world_map)
-            break
-
-        # Update statistics
-        stats["a_star"]["wins"] += answer0 == answer2
-        stats["a_star"]["losses"] += answer0 != answer2
-        stats["a_star"]["times"].append(time0)
-
-        stats["backtracking"]["wins"] += answer1 == answer2
-        stats["backtracking"]["losses"] += answer1 != answer2
-        stats["backtracking"]["times"].append(time1)
-
-        print(
-            f"\rProgress: {100 * i / number_of_runs:.1f}%", end="", flush=True
-        )
-
-    return stats
-
-
-def print_statistics(stats):
-    print("\n" + "=" * 60)
-    print("Statistics:")
-    print("=" * 60)
-
-    for algo in ["a_star", "backtracking"]:
-        data = stats[algo]
-        total = data["wins"] + data["losses"]
-        win_rate = (data["wins"] / total * 100) if total > 0 else 0
-
-        print(f"\n{algo.upper()}:")
-        print(f"  Wins: {data['wins']}")
-        print(f"  Losses: {data['losses']}")
-        print(f"  Win Rate: {win_rate:.1f}%")
-
-        if data["times"]:
-            print("  Time Statistics (seconds):")
-            print(f"    mean = {mean(data['times']):.3f}")
-            print(f"    median = {median(data['times']):.3f}")
-            print(
-                f"    mode = {mode(map(lambda x: round(x, 3), data['times']))}"
-            )
-            print(f"    std = {stdev(data['times']):.3f}")
-
-
-# Run the comparison and print statistics
-stats = run_comparison(10)
-print_statistics(stats)
-
-
-
-def print_map_colored(world_map, path_str=None):
-    colors = {
-        " ": "\033[90m·\033[0m",
-        "P": "\033[94mP\033[0m",
-        "O": "\033[91mO\033[0m",
-        "N": "\033[95mN\033[0m",
-        "W": "\033[93mW\033[0m",
-        "M": "\033[92mM\033[0m",
-        "G": "\033[96mG\033[0m",
-        "*": "\033[97m*\033[0m",
-    }
-
-    display_map = [row[:] for row in world_map]
-    path = []
-    if path_str and path_str != "Failed":
-        for pair in path_str.split(") ("):
-            clean = pair.strip("()\n")
-            x, y = map(int, clean.split(","))
-            path.append((x, y))
-    if path:
-        for cell in path:
-            x, y = cell
-
-            if 0 <= y < len(display_map) and 0 <= x < len(display_map[0]):
-                if display_map[x][y] == " ":
-                    display_map[x][y] = "*"
-
-    print("   " + " ".join(f"{i:2}" for i in range(len(display_map[0]))))
-
-    for i, row in enumerate(display_map):
-        colored_row = [colors.get(str(cell), str(cell)) for cell in row]
-        print(f"{i:2}  " + "  ".join(colored_row))

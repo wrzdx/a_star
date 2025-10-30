@@ -67,11 +67,7 @@ def read_obstacles(
         if x < 0 or x >= MAP_SIZE:
             continue
         for y in range(current_cell.y - radius, current_cell.y + radius + 1):
-            if (
-                y < 0
-                or y >= MAP_SIZE
-                or (x == current_cell.x and y == current_cell.y)
-            ):
+            if y < 0 or y >= MAP_SIZE or (x == current_cell.x and y == current_cell.y):
                 continue
             allowed_moves.append((x, y))
     for i in range(p):
@@ -140,14 +136,10 @@ def get_path(cell: Cell) -> List[Cell]:
     return path[::-1]
 
 
-def check_and_go(
-    current: Cell, next_cell: Cell, current_move_mode: int
-) -> int:
+def check_and_go(current: Cell, next_cell: Cell, current_move_mode: int) -> int:
     if current != next_cell.parent:
         while current.parent:
-            current_move_mode = try_switch_mode(
-                current.parent, current_move_mode
-            )
+            current_move_mode = try_switch_mode(current.parent, current_move_mode)
             current = current.parent
             print("m", current.x, current.y, flush=True)
             read_obstacles(current)
@@ -183,17 +175,13 @@ def a_star(
     if can_switch:
         current_move_mode = switch_move_mode(current_move_mode)
         print("r" if current_move_mode == WITH_RING else "rr", flush=True)
-        update_cell_state(
-            heap, current_cell, current_move_mode, radius, world_map
-        )
+        update_cell_state(heap, current_cell, current_move_mode, radius, world_map)
 
     while heap.size:
         next_cell = heap.pop()
         if next_cell.visited:
             continue
-        current_move_mode = check_and_go(
-            current_cell, next_cell, current_move_mode
-        )
+        current_move_mode = check_and_go(current_cell, next_cell, current_move_mode)
         current_cell = next_cell
         current_move_mode = try_switch_mode(current_cell, current_move_mode)
         current_cell.visited = True
@@ -201,19 +189,12 @@ def a_star(
             break
         print("m", current_cell.x, current_cell.y, flush=True)
 
-
-        update_cell_state(
-            heap, current_cell, current_move_mode, radius, world_map
-        )
-        can_switch = (
-            switch_move_mode(current_move_mode) & current_cell.move_mode
-        )
+        update_cell_state(heap, current_cell, current_move_mode, radius, world_map)
+        can_switch = switch_move_mode(current_move_mode) & current_cell.move_mode
         if can_switch:
             current_move_mode = switch_move_mode(current_move_mode)
             print("r" if current_move_mode == WITH_RING else "rr", flush=True)
-            update_cell_state(
-                heap, current_cell, current_move_mode, radius, world_map
-            )
+            update_cell_state(heap, current_cell, current_move_mode, radius, world_map)
 
     return get_path(goal_cell), current_move_mode
 
@@ -224,9 +205,7 @@ def main():
     answer = -1
     first_part: List[Cell] = []
     second_part: List[Cell] = []
-    first_part, current_move_mode = a_star(
-        (0, 0), gollum_position, perception_radius
-    )
+    first_part, current_move_mode = a_star((0, 0), gollum_position, perception_radius)
     if len(first_part) > 1:
         print("m", *gollum_position, flush=True)
         read_obstacles(first_part[-1])
