@@ -116,6 +116,7 @@ def update_neighbours(
             if new_cost < cell.cost:
                 cell.cost = new_cost
                 cell.parent = current_cell
+                cell.visited = False
                 heap.push(cell)
 
 
@@ -161,8 +162,8 @@ def get_path(cell: Cell) -> List[Cell]:
 def check_and_go(
     current: Cell, next_cell: Cell, current_move_mode: int
 ) -> int:
-    """If the next cell is not a direct neighbour of the current cell, 
-    move back to the common ancestor and then move forward to parent of the next cell. 
+    """If the next cell is not a direct neighbour of the current cell,
+    move back to the common ancestor and then move forward to parent of the next cell.
     Return the updated current move mode.
     """
     if current != next_cell.parent:
@@ -193,10 +194,12 @@ def a_star(
     move_mode_of_start: int = WITHOUT_RING | WITH_RING,
 ) -> Tuple[List[Cell], int]:
     """Perform the A* search algorithm from start to goal with given radius and move mode."""
+    
     # Initialize the world map and cells
     world_map: List[List[Cell]] = [
         [Cell(i, j) for j in range(MAP_SIZE)] for i in range(MAP_SIZE)
     ]
+
     # Set start and goal cells
     current_cell: Cell = world_map[start[0]][start[1]]
     current_cell.cost = 0
@@ -204,12 +207,15 @@ def a_star(
     current_cell.visited = True
     current_move_mode = move_mode
     goal_cell: Cell = world_map[goal[0]][goal[1]]
+
     # Initialize the heap with the goal cell
     heap: Heap = Heap(goal_cell)
+
     # Read initial obstacles and update neighbours
     update_cell_state(heap, current_cell, current_move_mode, radius, world_map)
-    can_switch = switch_move_mode(current_move_mode) & current_cell.move_mode
+
     # If we can switch move mode, do it and update neighbours
+    can_switch = switch_move_mode(current_move_mode) & current_cell.move_mode
     if can_switch:
         current_move_mode = switch_move_mode(current_move_mode)
         print("r" if current_move_mode == WITH_RING else "rr", flush=True)
